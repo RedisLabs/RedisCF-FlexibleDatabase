@@ -1,0 +1,78 @@
+version: 0.2
+
+env:
+  variables:
+    VERSION_NUMBER: "v1.0.0" # Default value
+
+phases:
+  pre_build:
+    commands:
+      - apt-get update
+      - apt-get install -y zip
+  build:
+    commands:
+      # Clone the GitHub repository
+      - git clone https://github.com/FlorinManaila/Redis-FlexibleDatabase.git
+      - cd Redis-FlexibleDatabase
+
+      # Extract the version number from the commit message
+      - |
+        commit_msg=$(git log -1 --pretty=format:%s)
+        version_number=$(echo "$commit_msg" | grep -oP 'v\d+\.\d+\.\d+')
+        export VERSION_NUMBER=$version_number
+
+      # Upload CF template to S3
+      - aws s3 cp CloudFormation/FlexibleDatabaseCFTemplate.yml s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+      - aws s3 cp CloudFormation/FlexibleDatabaseCFTemplate.yml s3://redis-cicd/Flexible-Database/latest/
+
+      - aws s3 cp CloudFormation/FlexibleDatabaseBackupCFTemplate.yml s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+      - aws s3 cp CloudFormation/FlexibleDatabaseBackupCFTemplate.yml s3://redis-cicd/Flexible-Database/latest/
+
+      - aws s3 cp CloudFormation/FlexibleDatabaseImportCFTemplate.yml s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+      - aws s3 cp CloudFormation/FlexibleDatabaseImportCFTemplate.yml s3://redis-cicd/Flexible-Database/latest/
+
+      # Create a zip archive for lambda and upload archives to S3
+      - zip -j FlexibleDatabase-Handler.zip Lambda/FlexibleDatabase-Handler.py
+      - zip -j FlexibleDatabaseBackup-Handler.zip Lambda/FlexibleDatabaseBackup-Handler.py
+      - zip -j FlexibleDatabaseImport-Handler.zip Lambda/FlexibleDatabaseImport-Handler.py
+
+      - zip -j FlexibleDatabase-CheckState.zip Lambda/FlexibleDatabase-CheckState.py
+      - zip -j FlexibleDatabaseBackup-CheckState.zip Lambda/FlexibleDatabaseBackup-CFResponse.py
+      - zip -j FlexibleDatabaseImport-CheckState.zip Lambda/FlexibleDatabaseImport-CFResponse.py
+
+      - zip -j FlexibleDatabase-CFResponse.zip Lambda/FlexibleDatabase-CFResponse.py
+      - zip -j FlexibleDatabaseBackup-CFResponse.zip Lambda/FlexibleDatabaseBackup-CFResponse.py
+      - zip -j FlexibleDatabaseImport-CFResponse.zip Lambda/FlexibleDatabaseImport-CFResponse.py
+
+      - aws s3 cp FlexibleDatabase-Handler.zip s3://redis-cicd/Flexible-Database/latest/
+      - aws s3 cp FlexibleDatabase-CheckState.zip s3://redis-cicd/Flexible-Database/latest/
+      - aws s3 cp FlexibleDatabase-CFResponse.zip s3://redis-cicd/Flexible-Database/latest/
+
+      - aws s3 cp FlexibleDatabase-Handler.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+      - aws s3 cp FlexibleDatabase-CheckState.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+      - aws s3 cp FlexibleDatabase-CFResponse.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+
+      - aws s3 cp FlexibleDatabaseBackup-Handler.zip s3://redis-cicd/Flexible-Database/latest/
+      - aws s3 cp FlexibleDatabaseBackup-CheckState.zip s3://redis-cicd/Flexible-Database/latest/
+      - aws s3 cp FlexibleDatabaseBackup-CFResponse.zip s3://redis-cicd/Flexible-Database/latest/
+
+      - aws s3 cp FlexibleDatabaseBackup-Handler.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+      - aws s3 cp FlexibleDatabaseBackup-CheckState.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+      - aws s3 cp FlexibleDatabaseBackup-CFResponse.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+
+      - aws s3 cp FlexibleDatabaseImport-Handler.zip s3://redis-cicd/Flexible-Database/latest/
+      - aws s3 cp FlexibleDatabaseImport-CheckState.zip s3://redis-cicd/Flexible-Database/latest/
+      - aws s3 cp FlexibleDatabaseImport-CFResponse.zip s3://redis-cicd/Flexible-Database/latest/
+
+      - aws s3 cp FlexibleDatabaseImport-Handler.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+      - aws s3 cp FlexibleDatabaseImport-CheckState.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+      - aws s3 cp FlexibleDatabaseImport-CFResponse.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+
+      # Create a zip archive for layers and upload archives to S3
+      - cd Layers/requests_layer && zip -r requests_layer.zip python
+      - aws s3 cp requests_layer.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+      - aws s3 cp requests_layer.zip s3://redis-cicd/Flexible-Database/latest/
+      - cd ../secrets_layer && zip -r secrets_layer.zip python
+      - aws s3 cp secrets_layer.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
+      - aws s3 cp secrets_layer.zip s3://redis-cicd/Flexible-Database/latest/
+      
