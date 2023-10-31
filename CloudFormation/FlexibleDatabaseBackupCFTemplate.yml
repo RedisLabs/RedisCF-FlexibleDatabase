@@ -1,0 +1,409 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloud formation template for Flexible Database Backup
+#Mappings section is designed for AWS managed layer: AWS-Parameters-and-Secrets-Lambda-Extension-Arm64. Because the layer ARN depends on the region
+#of creation, mappings will make a one-to-one relation between ARN and region.
+Mappings:
+  ParametersAndSecretsLayer:
+    us-east-1:
+        ParametersAndSecrets: arn:aws:lambda:us-east-1:177933569100:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    us-east-2:
+        ParametersAndSecrets: arn:aws:lambda:us-east-2:590474943231:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    us-west-1: 
+        ParametersAndSecrets: arn:aws:lambda:us-west-1:997803712105:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    us-west-2:
+        ParametersAndSecrets: arn:aws:lambda:us-west-2:345057560386:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    af-south-1:
+        ParametersAndSecrets: arn:aws:lambda:af-south-1:317013901791:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-east-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-east-1:768336418462:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-southeast-3:
+        ParametersAndSecrets: arn:aws:lambda:ap-southeast-3:490737872127:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-south-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-south-1:176022468876:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ap-northeast-3:
+        ParametersAndSecrets: arn:aws:lambda:ap-northeast-3:576959938190:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-northeast-2:
+        ParametersAndSecrets: arn:aws:lambda:ap-northeast-2:738900069198:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-southeast-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-southeast-1:044395824272:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ap-southeast-2:
+        ParametersAndSecrets: arn:aws:lambda:ap-southeast-2:665172237481:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ap-northeast-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-northeast-1:133490724326:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ca-central-1:
+        ParametersAndSecrets: arn:aws:lambda:ca-central-1:200266452380:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    eu-central-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-central-1:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    eu-west-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-west-1:015030872274:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    eu-west-2:
+        ParametersAndSecrets: arn:aws:lambda:eu-west-2:133256977650:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    eu-south-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-south-1:325218067255:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    eu-west-3:
+        ParametersAndSecrets: arn:aws:lambda:eu-west-3:780235371811:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    eu-north-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-north-1:427196147048:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    me-south-1:
+        ParametersAndSecrets: arn:aws:lambda:me-south-1:832021897121:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    sa-east-1:
+        ParametersAndSecrets: arn:aws:lambda:sa-east-1:933737806257:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+
+#All the parameters that can be used accord to Swagger with 2 additional ones: version and baseURL, used to determine the CloudFormation template
+#version that is desired to be used and the base URL for the RedisCloud server.        
+Parameters:
+    version:
+      Type: String
+      Description: "[Required]. The version of Cloud Formation template that is desired to be used. The version must be available in the S3 bucket. Default value: latest. Example: v2.3.4"
+      Default: "latest"
+    baseURL:
+      Type: String
+      Description: "[Required]. Base URL link used to connect to API. Example: https://api-k8s-cloudapi.qa.redislabs.com."
+      Default: https://api-k8s-cloudapi.qa.redislabs.com
+    subscriptionId:
+      Type: Number
+      Description: "[Required]. The ID of the Flexible Subscription that contains the Flexible Database that you want to backup. Example: 163199"
+    databaseId:
+      Type: Number
+      Description: "[Required]. The ID of the Flexible Database that you want to backup. Example: 163199"
+    regionName:
+      Type: String
+      Description: "[Optional]. Name of cloud provider region where the local database is located. When backing up an active-active database, backup is done separately for each local database at a specified region."
+
+#Metadata block is used to separate parameters displayed upon stack creation in a more organised order.
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - 
+        Parameters:
+          - version
+          - baseURL
+          - subscriptionId
+          - databaseId
+          - regionName
+
+#Conditions are used to check if an optional parameter have a value or the field is empty
+Conditions:
+  regionNameCondition: !Not [!Equals [!Ref regionName, ""]]
+
+#Resources block creates and integrates the required AWS services within the architecture
+Resources:
+  #Step Functions IAM role that allows Lambda invokation. Not available yet for Backup
+
+  # StepFunctionsAllowLambda:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     RoleName: 
+  #       Fn::Sub: StepFunctionsAllowLambdaForDatabaseBackup-${AWS::Region}-${AWS::StackName}
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #             - states.amazonaws.com
+  #           Action :
+  #           - sts:AssumeRole
+  #     Path: "/"
+  #     Policies:
+  #     - PolicyName: StepFunctionsAllowLambdaForDatabaseBackup
+  #       PolicyDocument:
+  #         Version: '2012-10-17'
+  #         Statement:
+  #         - Effect: Allow
+  #           Action:
+  #           - lambda:InvokeFunction
+  #           Resource: "*"
+
+  #Configuration of Step Functions' State Machine with all the required steps and lambda invokations. Not available for Backup
+
+  # MyStateMachine:
+  #   Type: AWS::StepFunctions::StateMachine
+  #   DependsOn: 
+  #     - FlexibleDatabaseBackupCheckState
+  #     - FlexibleDatabaseBackupCFResponse
+  #   Properties:
+  #     RoleArn: !GetAtt StepFunctionsAllowLambda.Arn
+  #     StateMachineName:
+  #       Fn::Sub: "FlexibleDatabaseBackup-StateMachine-${AWS::Region}-${AWS::StackName}"
+  #     DefinitionString: !Sub |-
+  #       {
+  #         "Comment": "A description of my state machine",
+  #         "StartAt": "CheckDatabaseStatus",
+  #         "States": {
+  #           "CheckDatabaseStatus": {
+  #             "Type": "Task",
+  #             "Resource": "arn:aws:states:::lambda:invoke",
+  #             "OutputPath": "$.Payload",
+  #             "Parameters": {
+  #               "Payload.$": "$",
+  #               "FunctionName": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:FlexibleDatabaseBackup-CheckState-${AWS::Region}-${AWS::StackName}"
+  #             },
+  #             "Retry": [
+  #               {
+  #                 "ErrorEquals": [
+  #                   "Lambda.ServiceException",
+  #                   "Lambda.AWSLambdaException",
+  #                   "Lambda.SdkClientException",
+  #                   "Lambda.TooManyRequestsException"
+  #                 ],
+  #                 "IntervalSeconds": 2,
+  #                 "MaxAttempts": 6,
+  #                 "BackoffRate": 2
+  #               }
+  #             ],
+  #             "Next": "Choice"
+  #           },
+  #           "Choice": {
+  #             "Type": "Choice",
+  #             "Choices": [
+  #               {
+  #                 "Not": {
+  #                   "Variable": "$.db_status",
+  #                   "StringEquals": "active"
+  #                 },
+  #                 "Next": "Wait"
+  #               }
+  #             ],
+  #             "Default": "GiveCFResponse"
+  #           },
+  #           "GiveCFResponse": {
+  #             "Type": "Task",
+  #             "Resource": "arn:aws:states:::lambda:invoke",
+  #             "OutputPath": "$.Payload",
+  #             "Parameters": {
+  #               "Payload.$": "$",
+  #               "FunctionName": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:FlexibleDatabaseBackup-CFResponse-${AWS::Region}-${AWS::StackName}"
+  #             },
+  #             "Retry": [
+  #               {
+  #                 "ErrorEquals": [
+  #                   "Lambda.ServiceException",
+  #                   "Lambda.AWSLambdaException",
+  #                   "Lambda.SdkClientException",
+  #                   "Lambda.TooManyRequestsException"
+  #                 ],
+  #                 "IntervalSeconds": 2,
+  #                 "MaxAttempts": 6,
+  #                 "BackoffRate": 2
+  #               }
+  #             ],
+  #             "End": true
+  #           },
+  #           "Wait": {
+  #             "Type": "Wait",
+  #             "Seconds": 300,
+  #             "Next": "CheckDatabaseStatus"
+  #           }
+  #         }
+  #       }
+
+  #Creation of lambda's requests_layer using the archive from S3.
+  RequestsLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: RequestsLayer
+      Description: RequestsLayer
+      Content:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Database/"
+              - !Ref version
+              - "/requests_layer.zip"
+      CompatibleRuntimes:
+        - python3.7
+        - python3.8
+        - python3.9
+        - python3.10
+        - python3.11
+      CompatibleArchitectures: 
+        - arm64
+        - x86_64
+
+  #Creation of lambda's secrets_layer using the archive from S3.
+  SecretsLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: SecretsLayer
+      Description: SecretsLayer
+      Content:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Database/"
+              - !Ref version
+              - "/secrets_layer.zip"
+      CompatibleRuntimes:
+        - python3.7
+        - python3.8
+        - python3.9
+        - python3.10
+        - python3.11
+      CompatibleArchitectures: 
+        - arm64
+        - x86_64
+
+  #Lambda's Execution Role created in IAM allowing CloudWatch, Step Functions, CloudFormation, Secrets Manager and S3 actions
+  RedisLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: 
+        Fn::Sub: FlexibleDatabaseBackupLambdaExecutionRole-${AWS::Region}-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: FlexibleDatabaseBackupLambdaExecutionRole
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:PutRetentionPolicy
+            - logs:CreateLogGroup
+            - states:*
+            - cloudformation:*
+            - secretsmanager:GetSecretValue
+            - s3:PutObject
+            - s3:PutObjectAcl
+            - s3:GetObject
+            - s3:GetObjectAcl
+            - s3:DeleteObject
+            Resource: "*"
+
+  #EventInvokeConfig blocks are used to set the maximum retry attempts of lambda's invokation to 0. This means that each lambda will run only 1 time.
+  FlexibleDatabaseBackupHandlerEventInvokeConfig:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties: 
+      FunctionName: !Ref FlexibleDatabaseBackupHandler
+      MaximumRetryAttempts: 0
+      Qualifier: $LATEST
+
+  #CheckState and CFResponse Lambda functions are not available for Backup   
+  
+  # FlexibleDatabaseBackupCheckStateEventInvokeConfig:
+  #   Type: AWS::Lambda::EventInvokeConfig
+  #   Properties: 
+  #     FunctionName: !Ref FlexibleDatabaseBackupCheckState
+  #     MaximumRetryAttempts: 0
+  #     Qualifier: $LATEST
+  # FlexibleDatabaseBackupCFResponseEventInvokeConfig:
+  #   Type: AWS::Lambda::EventInvokeConfig
+  #   Properties: 
+  #     FunctionName: !Ref FlexibleDatabaseBackupCFResponse
+  #     MaximumRetryAttempts: 0
+  #     Qualifier: $LATEST
+
+  #Main Lambda function's settings and configurations
+  FlexibleDatabaseBackupHandler:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: "FlexibleDatabaseBackup-Handler-${AWS::Region}-${AWS::StackName}"
+      Architectures: 
+        - arm64
+      Runtime: python3.10
+      Handler: FlexibleDatabaseBackup-Handler.lambda_handler
+      Timeout: 300
+      Role: !GetAtt RedisLambdaExecutionRole.Arn
+      Layers:
+        - !Ref RequestsLayer
+        - !Ref SecretsLayer
+        - !FindInMap [ParametersAndSecretsLayer, !Ref "AWS::Region", ParametersAndSecrets]
+      Code:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Database/"
+              - !Ref version
+              - "/FlexibleDatabaseBackup-Handler.zip"
+
+  #CheckState Lambda function's config and settings used to check if the resource created is active or not. Not applicable for Backup
+
+  # FlexibleDatabaseBackupCheckState:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     FunctionName:
+  #       Fn::Sub: "FlexibleDatabaseBackup-CheckState-${AWS::Region}-${AWS::StackName}"
+  #     Architectures: 
+  #       - arm64
+  #     Runtime: python3.10
+  #     Handler: FlexibleDatabaseBackup-CheckState.lambda_handler
+  #     Timeout: 300
+  #     Role: !GetAtt RedisLambdaExecutionRole.Arn
+  #     Layers:
+  #       - !Ref RequestsLayer
+  #       - !Ref SecretsLayer
+  #       - !FindInMap [ParametersAndSecretsLayer, !Ref "AWS::Region", ParametersAndSecrets]
+  #     Code:
+  #       S3Bucket: redis-cicd
+  #       S3Key:
+  #         Fn::Join:
+  #           - ""
+  #           - - "Flexible-Database/"
+  #             - !Ref version
+  #             - "/FlexibleDatabaseBackup-CheckState.zip"
+
+  #CFResponse Lambda function's config and settings used to send the response back to CloudFormation stack. Not applicable for Backup
+
+  # FlexibleDatabaseBackupCFResponse:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     FunctionName:
+  #       Fn::Sub: "FlexibleDatabaseBackup-CFResponse-${AWS::Region}-${AWS::StackName}"
+  #     Architectures: 
+  #       - arm64
+  #     Runtime: python3.10
+  #     Handler: FlexibleDatabaseBackup-CFResponse.lambda_handler
+  #     Timeout: 300
+  #     Role: !GetAtt RedisLambdaExecutionRole.Arn
+  #     Layers:
+  #       - !Ref RequestsLayer
+  #       - !Ref SecretsLayer
+  #       - !FindInMap [ParametersAndSecretsLayer, !Ref "AWS::Region", ParametersAndSecrets]
+  #     Code:
+  #       S3Bucket: redis-cicd
+  #       S3Key:
+  #         Fn::Join:
+  #           - ""
+  #           - - "Flexible-Database/"
+  #             - !Ref version
+  #             - "/FlexibleDatabaseBackup-CFResponse.zip"
+
+  #CloudFormation's custom resource that allows users to interact and insert values for Redis parameters in order to create relevant API Calls.           
+  Redis:
+    Type: Custom::FlexibleDatabaseBackup-Handler
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt FlexibleDatabaseBackupHandler.Arn
+      version:                             !Ref version
+      baseURL:                             !Ref baseURL
+      subscriptionId:                      !Ref subscriptionId
+      databaseId:                          !Ref databaseId
+      regionName:                          !If [regionNameCondition, !Ref regionName, !Ref "AWS::NoValue"]
+
+#Outputs section that is displayed in the Outputs' tab of the stack containing relevant information about Redis resources.
+#Those parameters are updated also upon stack Updates.   
+Outputs:
+  SubscriptionId:
+    Description: Subscription ID used for the current stack
+    Value: !GetAtt Redis.SubscriptionId
+  DatabaseId:
+    Description: Database ID for current stack
+    Value: !GetAtt Redis.DatabaseId
+  PostCall:
+    Description: POST API call sent as a JSON to Redis Cloud
+    Value: !GetAtt Redis.PostCall
