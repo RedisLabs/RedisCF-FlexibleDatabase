@@ -12,8 +12,8 @@ phases:
   build:
     commands:
       # Clone the GitHub repository
-      - git clone https://github.com/FlorinManaila/Redis-FlexibleDatabase.git
-      - cd Redis-FlexibleDatabase
+      - git clone https://github.com/RedisLabs/RedisCF-FlexibleDatabase.git
+      - cd RedisCF-FlexibleDatabase
 
       # Extract the version number from the commit message
       - |
