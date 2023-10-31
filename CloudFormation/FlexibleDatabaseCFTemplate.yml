@@ -1,0 +1,649 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloud formation template for Flexible Databases
+#Mappings section is designed for AWS managed layer: AWS-Parameters-and-Secrets-Lambda-Extension-Arm64. Because the layer ARN depends on the region
+#of creation, mappings will make a one-to-one relation between ARN and region.
+Mappings:
+  ParametersAndSecretsLayer:
+    us-east-1:
+        ParametersAndSecrets: arn:aws:lambda:us-east-1:177933569100:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    us-east-2:
+        ParametersAndSecrets: arn:aws:lambda:us-east-2:590474943231:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    us-west-1: 
+        ParametersAndSecrets: arn:aws:lambda:us-west-1:997803712105:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    us-west-2:
+        ParametersAndSecrets: arn:aws:lambda:us-west-2:345057560386:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    af-south-1:
+        ParametersAndSecrets: arn:aws:lambda:af-south-1:317013901791:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-east-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-east-1:768336418462:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-southeast-3:
+        ParametersAndSecrets: arn:aws:lambda:ap-southeast-3:490737872127:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-south-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-south-1:176022468876:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ap-northeast-3:
+        ParametersAndSecrets: arn:aws:lambda:ap-northeast-3:576959938190:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-northeast-2:
+        ParametersAndSecrets: arn:aws:lambda:ap-northeast-2:738900069198:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-southeast-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-southeast-1:044395824272:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ap-southeast-2:
+        ParametersAndSecrets: arn:aws:lambda:ap-southeast-2:665172237481:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ap-northeast-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-northeast-1:133490724326:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ca-central-1:
+        ParametersAndSecrets: arn:aws:lambda:ca-central-1:200266452380:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    eu-central-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-central-1:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    eu-west-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-west-1:015030872274:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    eu-west-2:
+        ParametersAndSecrets: arn:aws:lambda:eu-west-2:133256977650:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    eu-south-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-south-1:325218067255:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    eu-west-3:
+        ParametersAndSecrets: arn:aws:lambda:eu-west-3:780235371811:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    eu-north-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-north-1:427196147048:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    me-south-1:
+        ParametersAndSecrets: arn:aws:lambda:me-south-1:832021897121:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    sa-east-1:
+        ParametersAndSecrets: arn:aws:lambda:sa-east-1:933737806257:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+
+#All the parameters that can be used accord to Swagger with 2 additional ones: version and baseURL, used to determine the CloudFormation template
+#version that is desired to be used and the base URL for the RedisCloud server.  
+Parameters:
+    version:
+      Type: String
+      Description: "[Required]. The version of Cloud Formation template that is desired to be used. The version must be available in the S3 bucket. Default value: latest. Example: v2.3.4"
+      Default: "latest"
+    baseURL:
+      Type: String
+      Description: "[Required]. Base URL link used to connect to API. Example: https://api-k8s-cloudapi.qa.redislabs.com."
+      Default: https://api-k8s-cloudapi.qa.redislabs.com
+    subscriptionId:
+      Type: Number
+      Description: "[Required]. The ID of the Flexible Subscription that will make a peering connection. Example: 163199"
+    dryRun:
+      Type: String
+      AllowedValues: 
+        - true
+        - false
+      Description: "[Optional]. When 'false': Creates a deployment plan and deploys it (creating any resources required by the plan). When 'true': creates a read-only deployment plan without any resource creation. Example: false. Default: 'true'."
+      Default: true
+    dbname:
+      Type: String
+      Description: "[Required]. Database name (Database name must be up to 40 characters long, include only letters, digits, or hyphen ('-'), start with a letter, and end with a letter or digit). Example: Redis-database-example"
+    protocol:
+      Type: String
+      AllowedValues: 
+        - redis
+        - memcached
+      Description: "[Optional]. Database protocol: either 'redis' or 'memcached'. Default: 'redis'"
+      Default: redis
+    port:
+      Type: String
+      Description: "[Optional]. TCP port on which the database is available (10000-19999). Generated automatically if omitted. Example: 10000"
+    memoryLimitInGb:
+      Type: Number
+      Description: "[Required]. Maximum memory usage for this specific database. Minimum: 0.1. exclusiveMinimum: false. Example: 1"
+    respVersion:
+      Type: String
+      Description: "[Optional]. RESP version must be compatible with Redis version. Example: resp3. Allowed values: resp2/resp3."
+    supportOSSClusterApi:
+      Type: String
+      AllowedValues: 
+       - true
+       - false
+      Description: "[Optional]. Support Redis open-source (OSS) Cluster API. Default: 'false'"
+      Default: false
+    useExternalEndpointForOSSClusterApi:
+      Type: String
+      AllowedValues: 
+       - true
+       - false
+      Description: "[Optional]. Should use external endpoint for open-source (OSS) Cluster API. Can only be enabled if OSS Cluster API support is enabled'. Default: 'false'"
+      Default: false
+    dataPersistence:
+      Type: String
+      AllowedValues: 
+        - none
+        - aof-every-1-second
+        - aof-every-write
+        - snapshot-every-1-hour
+        - snapshot-every-6-hours
+        - snapshot-every-12-hours
+      Description: "[Optional]. Rate of database data persistence (in persistent storage). Example: none. Default: 'none'"
+      Default: none
+    dataEvictionPolicy:
+      Type: String
+      AllowedValues: 
+        - allkeys-lru
+        - allkeys-lfu
+        - allkeys-random
+        - volatile-lru
+        - volatile-lfu
+        - volatile-random
+        - volatile-ttl
+        - noeviction
+      Description: "[Optional]. Data items eviction method. Default: 'volatile-lru'"
+      Default: volatile-lru
+    replication:
+      Type: String
+      AllowedValues: 
+        - true
+        - false
+      Description: "[Optional]. Databases replication. Default: 'true'"
+      Default: true
+    replicaOf:
+      Type: String
+      Description: "[Optional]. This database will be a replica of the specified Redis databases provided as one or more URI (sample format: 'redis://user:password@host:port)'. If the URI provided is Redis Cloud instance, only host and port should be provided (using the format: ['redis://endpoint1:6379', 'redis://endpoint2:6380'])."
+    averageItemSizeInBytes:
+      Type: String
+      Description: "[Optional]. Relevant only to ram-and-flash subscriptions. Estimated average size (measured in bytes) of the items stored in the database, Default: 1000"
+    #throughputMeasurement
+    by:
+      Type: String
+      AllowedValues: 
+        - number-of-shards
+        - operations-per-second
+      Description: "[Required]. Throughput measurement method. Either 'number-of-shards' or 'operations-per-second'"
+    value:
+      Type: Number
+      Description: "[Required]. Throughput value (as applies to selected measurement method). Example: 10000"
+    #remoteBackup
+    active:
+      Type: String
+      Description: "[Optional]. Determine whether backup should be active or not. Default: null"
+    interval:
+      Type: String
+      Description: "[Required when active is true]. Represent the interval between backups, should be in the following format every-x-hours where x is one of (24,12,6,4,2,1). for example: 'every-4-hours'"
+    timeUTC:
+      Type: String
+      Description: "[Optional]. State the hour which the backup will take place. available only for 12 or 24 hours backup interval. should be specified an hour for example 2 PM as 14:00"
+    storageType:
+      Type: String
+      Description: "[Required when active is true]. Type of storage source from which to import the database file (RDB files) or data (Redis connection). List of options: [http, redis, ftp, aws-s3, azure-blob-storage, google-blob-storage]."
+    storagePath:
+      Type: String
+      Description: "[Required when active is true]. Path for backup. s3://<bucket-name>/<path>/"
+    sourceIp:
+      Type: String
+      Description: "[Optional]. List of source IP addresses or subnet masks. If specified, Redis clients will be able to connect to this database only from within the specified source IP addresses ranges. example value: '['192.168.10.0/32', '192.168.12.0/24']'"
+    clientSslCertificate:
+      Type: String
+      Description: "[Optional]. A string containing TLS/SSL certificate (public key) with new line characters replaced by \n. If specified, mTLS authentication (with enableTls not specified or set to true) will be required to authenticate user connections. If empty string is received, SSL certificate will be removed and mTLS will not be required (note that TLS connection may still apply, depending on the value of the enableTls property). Default: 'null'"
+    enableTls:
+      Type: String
+      Description: "[Optional]. When 'true', requires TLS authentication for all connections (mTLS with valid clientSslCertificate, regular TLS when the clientSslCertificate is not provided. Default: 'false'"
+    password:
+      Type: String
+      Description: "[Optional]. Password to access the database. If omitted, a random 32 character long alphanumeric password will be automatically generated. Can only be set if Database Protocol is REDIS"
+    saslUsername:
+      Type: String
+      Description: "[Optional]. Memcached (SASL) Username to access the database. If omitted, the username will be set to a 'mc-' prefix followed by a random 5 character long alphanumeric. Can only be set if Database Protocol is MEMCACHED"
+    saslPassword:
+      Type: String
+      Description: "[Optional]. Memcached (SASL) Password to access the database. If omitted, a random 32 character long alphanumeric password will be automatically generated. Can only be set if Database Protocol is MEMCACHED"
+    #alerts
+    alertName:
+      Type: String
+      Description: "[Required to enable alerts]. Alert name. Name list: [ dataset-size, datasets-size, throughput-higher-than, throughput-lower-than, latency, syncsource-error, syncsource-lag, connections-limit ]"
+    alertValue:
+      Type: String
+      Description: "[Required to enable alerts]. Alert value. Example: 80"
+    #modules
+    moduleName:
+      Type: String
+      Description: "[Required only to enable modules]. Redis module Id"
+    parameters:
+      Type: String
+      Description: "[Optional]. Redis database module parameters (name and value), as relevant to the specific module (see modules parameters specification). Example: OrderedMap {}"
+    regexRules:
+      Type: String
+      Description: '[Cannot assign value upon creating stack. Value can be assigned only on stack update][Optional]. Shard regex rules. Relevant only for a sharded database. Example: "regexRules": [{"ordinal": 1, "pattern": "(?<tag>.*)"}, {"ordinal": 0, "pattern": ".*\\{(?<tag>.*)\\}.*"}]'
+    enableDefaultUser:
+      Type: String
+      Description: "[Cannot assign value upon creating stack. Value can be assigned only on stack update][Optional]. When 'true', enables connecting to the database with the 'default' user. Default: 'true'. Can only be set if Database Protocol is REDIS"
+
+#Metadata block is used to separate parameters displayed upon stack creation in a more organised order.
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - 
+        Parameters:
+          - dbname
+          - version
+          - baseURL
+          - subscriptionId
+          - dryRun
+          - protocol
+          - port
+          - memoryLimitInGb
+          - respVersion
+          - supportOSSClusterApi
+          - useExternalEndpointForOSSClusterApi
+          - dataPersistence
+          - dataEvictionPolicy
+          - replication
+          - replicaOf
+          - averageItemSizeInBytes
+          - sourceIp
+          - clientSslCertificate
+          - enableTls
+          - password
+          - saslUsername
+          - saslPassword
+      - 
+       Label: 
+         default: "throughputMeasurement"
+       Parameters:
+         - by
+         - value
+      - 
+       Label: 
+         default: "remoteBackup"
+       Parameters:
+         - active
+         - interval
+         - timeUTC
+         - storageType
+         - storagePath
+      - 
+       Label: 
+         default: "alerts"
+       Parameters:
+         - alertName
+         - alertValue
+      - 
+       Label: 
+         default: "modules"
+       Parameters:
+         - moduleName
+         - parameters
+      -
+        Label: 
+          default: "Only for Update Stack"
+        Parameters:
+         - regexRules
+         - enableDefaultUser
+
+#Conditions are used to check if an optional parameter have a value or the field is empty
+Conditions:
+  dryRunCondition:                              !Not [!Equals [!Ref dryRun, ""]]
+  protocolCondition:                            !Not [!Equals [!Ref protocol, ""]]
+  portCondition:                                !Not [!Equals [!Ref port, ""]]
+  respVersionCondition:                         !Not [!Equals [!Ref respVersion, ""]]
+  supportOSSClusterApiCondition:                !Not [!Equals [!Ref supportOSSClusterApi, ""]]
+  useExternalEndpointForOSSClusterApiCondition: !Not [!Equals [!Ref useExternalEndpointForOSSClusterApi, ""]]
+  dataPersistenceCondition:                     !Not [!Equals [!Ref dataPersistence, ""]]
+  dataEvictionPolicyCondition:                  !Not [!Equals [!Ref dataEvictionPolicy, ""]]
+  replicationCondition:                         !Not [!Equals [!Ref replication, ""]]
+  replicaOfCondition:                           !Not [!Equals [!Ref replicaOf, ""]]
+  byCondition:                                  !Not [!Equals [!Ref by, ""]]
+  valueCondition:                               !Not [!Equals [!Ref value, ""]]
+  averageItemSizeInBytesCondition:              !Not [!Equals [!Ref averageItemSizeInBytes, ""]]
+  activeCondition:                              !Not [!Equals [!Ref active, ""]]
+  intervalCondition:                            !Not [!Equals [!Ref interval, ""]]
+  timeUTCCondition:                             !Not [!Equals [!Ref timeUTC, ""]]
+  storageTypeCondition:                         !Not [!Equals [!Ref storageType, ""]]
+  storagePathCondition:                         !Not [!Equals [!Ref storagePath, ""]]
+  sourceIpCondition:                            !Not [!Equals [!Ref sourceIp, ""]]
+  clientSslCertificateCondition:                !Not [!Equals [!Ref clientSslCertificate, ""]]
+  enableTlsCondition:                           !Not [!Equals [!Ref enableTls, ""]]
+  passwordCondition:                            !Not [!Equals [!Ref password, ""]]
+  saslUsernameCondition:                        !Not [!Equals [!Ref saslUsername, ""]]
+  saslPasswordCondition:                        !Not [!Equals [!Ref saslPassword, ""]]
+  alertNameCondition:                           !Not [!Equals [!Ref alertName, ""]]
+  alertValueCondition:                          !Not [!Equals [!Ref alertValue, ""]]
+  moduleNameCondition:                          !Not [!Equals [!Ref moduleName, ""]]
+  parametersCondition:                          !Not [!Equals [!Ref parameters, ""]]
+  regexRulesCondition:                          !Not [!Equals [!Ref regexRules, ""]]
+  enableDefaultUserCondition:                   !Not [!Equals [!Ref enableDefaultUser, ""]]
+
+#Resources block creates and integrates the required AWS services within the architecture
+Resources:
+  #Step Functions IAM role that allows Lambda invokation
+  StepFunctionsAllowLambda:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: 
+        Fn::Sub: StepFunctionsAllowLambdaForDatabase-${AWS::Region}-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - states.amazonaws.com
+            Action :
+            - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: StepFunctionsAllowLambdaForDatabase
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - lambda:InvokeFunction
+            Resource: "*"
+
+  #Configuration of Step Functions' State Machine with all the required steps and lambda invokations
+  MyStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    DependsOn: 
+      - FlexibleDatabaseCheckState
+      - FlexibleDatabaseCFResponse
+    Properties:
+      RoleArn: !GetAtt StepFunctionsAllowLambda.Arn
+      StateMachineName:
+        Fn::Sub: "FlexibleDatabase-StateMachine-${AWS::Region}-${AWS::StackName}"
+      DefinitionString: !Sub |-
+        {
+          "Comment": "A description of my state machine",
+          "StartAt": "CheckDatabaseStatus",
+          "States": {
+            "CheckDatabaseStatus": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:FlexibleDatabase-CheckState-${AWS::Region}-${AWS::StackName}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Choice"
+            },
+            "Choice": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Not": {
+                    "Variable": "$.db_status",
+                    "StringEquals": "active"
+                  },
+                  "Next": "Wait"
+                }
+              ],
+              "Default": "GiveCFResponse"
+            },
+            "GiveCFResponse": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:FlexibleDatabase-CFResponse-${AWS::Region}-${AWS::StackName}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true
+            },
+            "Wait": {
+              "Type": "Wait",
+              "Seconds": 300,
+              "Next": "CheckDatabaseStatus"
+            }
+          }
+        }
+
+  #Creation of lambda's requests_layer using the archive from S3.
+  RequestsLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: RequestsLayer
+      Description: RequestsLayer
+      Content:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Database/"
+              - !Ref version
+              - "/requests_layer.zip"
+      CompatibleRuntimes:
+        - python3.7
+        - python3.8
+        - python3.9
+        - python3.10
+        - python3.11
+      CompatibleArchitectures: 
+        - arm64
+        - x86_64
+
+  #Creation of lambda's secrets_layer using the archive from S3.
+  SecretsLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: SecretsLayer
+      Description: SecretsLayer
+      Content:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Database/"
+              - !Ref version
+              - "/secrets_layer.zip"
+      CompatibleRuntimes:
+        - python3.7
+        - python3.8
+        - python3.9
+        - python3.10
+        - python3.11
+      CompatibleArchitectures: 
+        - arm64
+        - x86_64
+
+  #Lambda's Execution Role created in IAM allowing CloudWatch, Step Functions, CloudFormation, Secrets Manager and S3 actions      
+  RedisLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: 
+        Fn::Sub: FlexibleDatabaseLambdaExecutionRole-${AWS::Region}-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: FlexibleDatabaseLambdaExecutionRole
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:PutRetentionPolicy
+            - logs:CreateLogGroup
+            - states:*
+            - cloudformation:*
+            - secretsmanager:GetSecretValue
+            - s3:PutObject
+            - s3:PutObjectAcl
+            - s3:GetObject
+            - s3:GetObjectAcl
+            - s3:DeleteObject
+            Resource: "*"
+
+  #EventInvokeConfig blocks are used to set the maximum retry attempts of lambda's invokation to 0. This means that each lambda will run only 1 time.
+  FlexibleDatabaseHandlerEventInvokeConfig:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties: 
+      FunctionName: !Ref FlexibleDatabaseHandler
+      MaximumRetryAttempts: 0
+      Qualifier: $LATEST
+  FlexibleDatabaseCheckStateEventInvokeConfig:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties: 
+      FunctionName: !Ref FlexibleDatabaseCheckState
+      MaximumRetryAttempts: 0
+      Qualifier: $LATEST
+  FlexibleDatabaseCFResponseEventInvokeConfig:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties: 
+      FunctionName: !Ref FlexibleDatabaseCFResponse
+      MaximumRetryAttempts: 0
+      Qualifier: $LATEST
+
+  #Main Lambda function's settings and configurations
+  FlexibleDatabaseHandler:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: "FlexibleDatabase-Handler-${AWS::Region}-${AWS::StackName}"
+      Architectures: 
+        - arm64
+      Runtime: python3.10
+      Handler: FlexibleDatabase-Handler.lambda_handler
+      Timeout: 300
+      Role: !GetAtt RedisLambdaExecutionRole.Arn
+      Layers:
+        - !Ref RequestsLayer
+        - !Ref SecretsLayer
+        - !FindInMap [ParametersAndSecretsLayer, !Ref "AWS::Region", ParametersAndSecrets]
+      Code:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Database/"
+              - !Ref version
+              - "/FlexibleDatabase-Handler.zip"
+
+  #CheckState Lambda function's config and settings used to check if the resource created is active or not.
+  FlexibleDatabaseCheckState:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: "FlexibleDatabase-CheckState-${AWS::Region}-${AWS::StackName}"
+      Architectures: 
+        - arm64
+      Runtime: python3.10
+      Handler: FlexibleDatabase-CheckState.lambda_handler
+      Timeout: 300
+      Role: !GetAtt RedisLambdaExecutionRole.Arn
+      Layers:
+        - !Ref RequestsLayer
+        - !Ref SecretsLayer
+        - !FindInMap [ParametersAndSecretsLayer, !Ref "AWS::Region", ParametersAndSecrets]
+      Code:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Database/"
+              - !Ref version
+              - "/FlexibleDatabase-CheckState.zip"
+
+  #CFResponse Lambda function's config and settings used to send the response back to CloudFormation stack.   
+  FlexibleDatabaseCFResponse:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: "FlexibleDatabase-CFResponse-${AWS::Region}-${AWS::StackName}"
+      Architectures: 
+        - arm64
+      Runtime: python3.10
+      Handler: FlexibleDatabase-CFResponse.lambda_handler
+      Timeout: 300
+      Role: !GetAtt RedisLambdaExecutionRole.Arn
+      Layers:
+        - !Ref RequestsLayer
+        - !Ref SecretsLayer
+        - !FindInMap [ParametersAndSecretsLayer, !Ref "AWS::Region", ParametersAndSecrets]
+      Code:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Database/"
+              - !Ref version
+              - "/FlexibleDatabase-CFResponse.zip"
+
+  #CloudFormation's custom resource that allows users to interact and insert values for Redis parameters in order to create relevant API Calls.
+  Redis:
+    Type: Custom::FlexibleDatabase-Handler
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt FlexibleDatabaseHandler.Arn
+      version:                             !Ref version
+      baseURL:                             !Ref baseURL
+      subscriptionId:                      !Ref subscriptionId
+      dryRun:                              !If [dryRunCondition, !Ref dryRun, !Ref "AWS::NoValue"]
+      dbname:                              !Ref dbname
+      protocol:                            !If [protocolCondition, !Ref protocol, !Ref "AWS::NoValue"]
+      port:                                !If [portCondition, !Ref port, !Ref "AWS::NoValue"]
+      memoryLimitInGb:                     !Ref memoryLimitInGb
+      respVersion:                         !If [respVersionCondition, !Ref respVersion, !Ref "AWS::NoValue"]
+      supportOSSClusterApi:                !If [supportOSSClusterApiCondition, !Ref supportOSSClusterApi, !Ref "AWS::NoValue"]
+      useExternalEndpointForOSSClusterApi: !If [useExternalEndpointForOSSClusterApiCondition, !Ref useExternalEndpointForOSSClusterApi, !Ref "AWS::NoValue"]
+      dataPersistence:                     !If [dataPersistenceCondition, !Ref dataPersistence, !Ref "AWS::NoValue"]
+      dataEvictionPolicy:                  !If [dataEvictionPolicyCondition, !Ref dataEvictionPolicy, !Ref "AWS::NoValue"]
+      replication:                         !If [replicationCondition, !Ref replication, !Ref "AWS::NoValue"]
+      replicaOf:                           !If [replicaOfCondition, !Ref replicaOf, !Ref "AWS::NoValue"]
+      averageItemSizeInBytes:              !If [averageItemSizeInBytesCondition, !Ref averageItemSizeInBytes, !Ref "AWS::NoValue"]
+      by:                                  !If [byCondition, !Ref by, !Ref "AWS::NoValue"]
+      value:                               !If [valueCondition, !Ref value, !Ref "AWS::NoValue"]
+      active:                              !If [activeCondition, !Ref active, !Ref "AWS::NoValue"]
+      interval:                            !If [intervalCondition, !Ref interval, !Ref "AWS::NoValue"]
+      timeUTC:                             !If [timeUTCCondition, !Ref timeUTC, !Ref "AWS::NoValue"]
+      storageType:                         !If [storageTypeCondition, !Ref storageType, !Ref "AWS::NoValue"]
+      storagePath:                         !If [storagePathCondition, !Ref storagePath, !Ref "AWS::NoValue"]
+      sourceIp:                            !If [sourceIpCondition, !Ref sourceIp, !Ref "AWS::NoValue"]
+      clientSslCertificate:                !If [clientSslCertificateCondition, !Ref clientSslCertificate, !Ref "AWS::NoValue"]
+      enableTls:                           !If [enableTlsCondition, !Ref enableTls, !Ref "AWS::NoValue"]
+      password:                            !If [passwordCondition, !Ref password, !Ref "AWS::NoValue"]
+      saslUsername:                        !If [saslUsernameCondition, !Ref saslUsername, !Ref "AWS::NoValue"]
+      saslPassword:                        !If [saslPasswordCondition, !Ref saslPassword, !Ref "AWS::NoValue"]
+      alertName:                           !If [alertNameCondition, !Ref alertName, !Ref "AWS::NoValue"]
+      alertValue:                          !If [alertValueCondition, !Ref alertValue, !Ref "AWS::NoValue"]
+      moduleName:                          !If [moduleNameCondition, !Ref moduleName, !Ref "AWS::NoValue"]
+      parameters:                          !If [parametersCondition, !Ref parameters, !Ref "AWS::NoValue"]
+      regexRules:                          !If [regexRulesCondition, !Ref regexRules, !Ref "AWS::NoValue"]
+      enableDefaultUser:                   !If [enableDefaultUserCondition, !Ref enableDefaultUser, !Ref "AWS::NoValue"]
+
+#Outputs section that is displayed in the Outputs' tab of the stack containing relevant information about Redis resources.
+#Those parameters are updated also upon stack Updates.   
+Outputs:
+  SubscriptionId:
+    Description: Subscription ID used for the current stack
+    Value: !GetAtt Redis.SubscriptionId
+  DatabaseId:
+    Description: Database ID for current stack
+    Value: !GetAtt Redis.DatabaseId
+  DatabaseDescription:
+    Description: Database Description which is related to successfull/failed API call
+    Value: !GetAtt Redis.DatabaseDescription
+  PostCall:
+    Description: POST API call sent as a JSON to Redis Cloud
+    Value: !GetAtt Redis.PostCall
