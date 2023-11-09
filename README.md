@@ -11,6 +11,9 @@
 This repository contains an AWS CloudFormation project that simplifies the management of AWS resources using infrastructure as code. With CloudFormation, you can create, update, and delete stacks of AWS resources in a controlled and automated manner.
 
 ## Stack Create For Flexible Database Template
+Stack name for Database must have maximum 33 characters as a limitation.
+Stack name for Database Backup and stack name for Database Import must have maximum 30 characters as a limitation.
+
 The "Stack Create" chapter provides guidance on how to create a new CloudFormation stack. It covers the following topics:
 - Prerequisites for creating a stack.
   1. Redis credentials must be configured in AWS Secrets Manager
