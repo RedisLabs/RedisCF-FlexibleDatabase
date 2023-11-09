@@ -69,8 +69,8 @@ Parameters:
       AllowedValues: 
         - true
         - false
-      Description: "[Optional]. When 'false': Creates a deployment plan and deploys it (creating any resources required by the plan). When 'true': creates a read-only deployment plan without any resource creation. Example: false. Default: 'true'."
-      Default: true
+      Description: "[Optional]. When 'false': Creates a deployment plan and deploys it (creating any resources required by the plan). When 'true': creates a read-only deployment plan without any resource creation. Example: false. Default: 'false'."
+      Default: false
     dbname:
       Type: String
       Description: "[Required]. Database name (Database name must be up to 40 characters long, include only letters, digits, or hyphen ('-'), start with a letter, and end with a letter or digit). Example: Redis-database-example"
