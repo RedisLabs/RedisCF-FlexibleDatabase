@@ -58,8 +58,8 @@ Parameters:
       Default: "latest"
     baseURL:
       Type: String
-      Description: "[Required]. Base URL link used to connect to API. Example: https://api-k8s-cloudapi.qa.redislabs.com."
-      Default: https://api-k8s-cloudapi.qa.redislabs.com
+      Description: "[Required]. Base URL link used to connect to API. Example: https://api.redislabs.com."
+      Default: https://api.redislabs.com
     subscriptionId:
       Type: Number
       Description: "[Required]. The ID of the Flexible Subscription that contains the Flexible Database that you want to backup. Example: 163199"
@@ -251,7 +251,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: 
-        Fn::Sub: FlexibleDatabaseBackupLambdaExecutionRole-${AWS::Region}-${AWS::StackName}
+        Fn::Sub: FlxDbBckLambdaRole-${AWS::Region}-${AWS::StackName}
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -263,7 +263,7 @@ Resources:
           - sts:AssumeRole
       Path: "/"
       Policies:
-      - PolicyName: FlexibleDatabaseBackupLambdaExecutionRole
+      - PolicyName: FlxDbBckLambdaRole
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
