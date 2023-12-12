@@ -376,7 +376,7 @@ def PostDatabase (event, subscription_id):
     print ("This is the response after POST call: " + str(response_json))
 
     time.sleep(5)
-    response = requests.get(responseValue['links'][0]['href'], headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
+    response = requests.get(response['links'][0]['href'], headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
     response = response.json()
     print ("This is the response 5 seconds after POST call: " + str(response))
 
