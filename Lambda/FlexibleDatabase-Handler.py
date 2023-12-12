@@ -170,40 +170,40 @@ def lambda_handler (event, context):
     #If the action of CloudFormation is Create stack                
     if event['RequestType'] == "Create":
         #The API Call the creates the Database
-        # try:
-        responseValue = PostDatabase(callEvent, subscription_id)
-        print (responseValue)
-        if "processing-error" in str(responseValue):
-            db_error = GetDatabaseError (responseValue['links'][0]['href'])
-            responseStatus = 'FAILED'
-            reason = str(db_error)
-            if responseStatus == 'FAILED':
-                responseBody.update({"Status":responseStatus})
-                if "Reason" in str(responseBody):
-                    responseBody.update({"Reason":reason})
-                else:
-                    responseBody["Reason"] = reason
-                GetResponse(responseURL, responseBody)
+        try:
+            responseValue = PostDatabase(callEvent, subscription_id)
+            print (responseValue)
 
+            try:
+                if "processing-error" in str(responseValue):           
+                    db_error = GetDatabaseError (responseValue['links'][0]['href'])
+                    responseStatus = 'FAILED'
+                    reason = str(db_error)
+                    if responseStatus == 'FAILED':
+                        responseBody.update({"Status":responseStatus})
+                        if "Reason" in str(responseBody):
+                            responseBody.update({"Reason":reason})
+                        else:
+                            responseBody["Reason"] = reason
+                        GetResponse(responseURL, responseBody)
 
-        # try:
-        #Retrieving Database ID and Database Description to populate Outputs tab of the stack
-        db_id, db_description = GetDatabaseId (responseValue['links'][0]['href'])
-        print ("Description for Database with id " + str(db_id) + " is: " + str(db_description))
-        responseData.update({"SubscriptionId":str(subscription_id), "DatabaseId":str(db_id), "DatabaseDescription":str(db_description), "PostCall":str(callEvent)})
-        responseBody.update({"Data":responseData})
-        #Initializing input for Step Functions then triggering the state machine
-        SFinput = {}
-        SFinput["responseBody"] = responseBody
-        SFinput["responseURL"] = responseURL
-        SFinput["base_url"] = event['ResourceProperties']['baseURL']
-        response = stepfunctions.start_execution(
-            stateMachineArn = f'arn:aws:states:{runtime_region}:{aws_account_id}:stateMachine:FlexibleDatabase-StateMachine-{runtime_region}-{stack_name}',
-            name = f'FlexibleDatabase-StateMachine-{runtime_region}-{stack_name}',
-            input = json.dumps(SFinput)
-            )
-        print ("Output sent to Step Functions is the following:")
-        print (json.dumps(SFinput))
+                #Retrieving Database ID and Database Description to populate Outputs tab of the stack
+                db_id, db_description = GetDatabaseId (responseValue['links'][0]['href'])
+                print ("Description for Database with id " + str(db_id) + " is: " + str(db_description))
+                responseData.update({"SubscriptionId":str(subscription_id), "DatabaseId":str(db_id), "DatabaseDescription":str(db_description), "PostCall":str(callEvent)})
+                responseBody.update({"Data":responseData})
+                #Initializing input for Step Functions then triggering the state machine
+                SFinput = {}
+                SFinput["responseBody"] = responseBody
+                SFinput["responseURL"] = responseURL
+                SFinput["base_url"] = event['ResourceProperties']['baseURL']
+                response = stepfunctions.start_execution(
+                    stateMachineArn = f'arn:aws:states:{runtime_region}:{aws_account_id}:stateMachine:FlexibleDatabase-StateMachine-{runtime_region}-{stack_name}',
+                    name = f'FlexibleDatabase-StateMachine-{runtime_region}-{stack_name}',
+                    input = json.dumps(SFinput)
+                    )
+                print ("Output sent to Step Functions is the following:")
+                print (json.dumps(SFinput))
             
             except:
                 #If any error is encounter in the "try" block, then a function will catch the error and throw it back to CloudFormation as a failure reason.
@@ -218,17 +218,17 @@ def lambda_handler (event, context):
                         responseBody["Reason"] = reason
                     GetResponse(responseURL, responseBody)
 
-        # except:
-        #         #This except block is triggered only for wrong base_url or wrong credentials.
-        #         responseStatus = 'FAILED'
-        #         reason = 'Please check if the base_url or the credentials set in Secrets Manager are wrong.'
-        #         if responseStatus == 'FAILED':
-        #             responseBody.update({"Status":responseStatus})
-        #             if "Reason" in str(responseBody):
-        #                 responseBody.update({"Reason":reason})
-        #             else:
-        #                 responseBody["Reason"] = reason
-        #             GetResponse(responseURL, responseBody)
+        except:
+                #This except block is triggered only for wrong base_url or wrong credentials.
+                responseStatus = 'FAILED'
+                reason = 'Please check if the base_url or the credentials set in Secrets Manager are wrong.'
+                if responseStatus == 'FAILED':
+                    responseBody.update({"Status":responseStatus})
+                    if "Reason" in str(responseBody):
+                        responseBody.update({"Reason":reason})
+                    else:
+                        responseBody["Reason"] = reason
+                    GetResponse(responseURL, responseBody)
         
     #If the action of CloudFormation is Update stack
     if event['RequestType'] == "Update":
@@ -374,8 +374,14 @@ def PostDatabase (event, subscription_id):
     response = requests.post(url, headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key, "Content-Type":content_type}, json = event)
     response_json = response.json()
     print ("This is the response after POST call: " + str(response_json))
-    return response_json
-    Logs(response_json)
+
+    time.sleep(5)
+    response = requests.get(responseValue['links'][0]['href'], headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
+    response = response.json()
+    print ("This is the response 5 seconds after POST call: " + str(response))
+
+    return response
+    Logs(response)
 
 #Returns the status of the Database: active/pending/deleting
 def GetDatabaseStatus (subscription_id, database_id):
