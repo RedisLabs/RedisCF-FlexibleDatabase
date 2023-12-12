@@ -192,7 +192,7 @@ Resources:
   #           },
   #           "Wait": {
   #             "Type": "Wait",
-  #             "Seconds": 300,
+  #             "Seconds": 60,
   #             "Next": "CheckDatabaseStatus"
   #           }
   #         }

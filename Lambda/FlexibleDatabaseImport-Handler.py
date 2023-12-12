@@ -65,42 +65,55 @@ def lambda_handler (event, context):
     #If the action of CloudFormation is Create stack                
     if event['RequestType'] == "Create":
         #The API Call the creates the Import
-        responseValue = PostImport(callEvent, subscription_id, database_id)
-        print ("This is the responseValue")
-        print (responseValue)
-        
-        #This section is commented until/if Redis CAPI will support status update while creating backup.
-        
-        # SFinput = {}
-        # SFinput["responseBody"] = responseBody
-        # SFinput["responseURL"] = responseURL
-        # SFinput["base_url"] = event['ResourceProperties']['baseURL']
-        # response = stepfunctions.start_execution(
-        #     stateMachineArn = f'arn:aws:states:{runtime_region}:{aws_account_id}:stateMachine:FlexibleDatabaseImport-StateMachine-{runtime_region}-{stack_name}',
-        #     name = f'FlexibleDatabaseImport-StateMachine-{runtime_region}-{stack_name}',
-        #     input = json.dumps(SFinput)
-        #     )
-        # print ("Output sent to Step Functions is the following:")
-        # print (json.dumps(SFinput))           
-        
-        #Checking if the process was success or failure
-        status = CheckStatus(responseValue['links'][0]['href'])
-        #Populate Outputs tab of the stack
-        if "processing-completed" in status:
-            responseData.update({"SubscriptionId":str(subscription_id), "DatabaseId":str(database_id), "PostCall":str(callEvent)})
-            responseBody.update({"Data":responseData})
-            GetResponse(responseURL, responseBody)
-        else:
-            #If any error is encounter in the "try" block, then a function will catch the error and throw it back to CloudFormation as a failure reason.
-            responseStatus = 'FAILED'
-            reason = status
-            if responseStatus == 'FAILED':
-                responseBody.update({"Status":responseStatus})
-                if "Reason" in str(responseBody):
-                    responseBody.update({"Reason":reason})
-                else:
-                    responseBody["Reason"] = reason
+        try:
+            responseValue = PostImport(callEvent, subscription_id, database_id)
+            print ("This is the responseValue")
+            print (responseValue)
+            
+            #This section is commented until/if Redis CAPI will support status update while creating backup.
+            
+            # SFinput = {}
+            # SFinput["responseBody"] = responseBody
+            # SFinput["responseURL"] = responseURL
+            # SFinput["base_url"] = event['ResourceProperties']['baseURL']
+            # response = stepfunctions.start_execution(
+            #     stateMachineArn = f'arn:aws:states:{runtime_region}:{aws_account_id}:stateMachine:FlexibleDatabaseImport-StateMachine-{runtime_region}-{stack_name}',
+            #     name = f'FlexibleDatabaseImport-StateMachine-{runtime_region}-{stack_name}',
+            #     input = json.dumps(SFinput)
+            #     )
+            # print ("Output sent to Step Functions is the following:")
+            # print (json.dumps(SFinput))           
+            
+            #Checking if the process was success or failure
+            status = CheckStatus(responseValue['links'][0]['href'])
+            #Populate Outputs tab of the stack
+            if "processing-completed" in status:
+                responseData.update({"SubscriptionId":str(subscription_id), "DatabaseId":str(database_id), "PostCall":str(callEvent)})
+                responseBody.update({"Data":responseData})
                 GetResponse(responseURL, responseBody)
+            else:
+                #If any error is encounter in the "try" block, then a function will catch the error and throw it back to CloudFormation as a failure reason.
+                responseStatus = 'FAILED'
+                reason = status
+                if responseStatus == 'FAILED':
+                    responseBody.update({"Status":responseStatus})
+                    if "Reason" in str(responseBody):
+                        responseBody.update({"Reason":reason})
+                    else:
+                        responseBody["Reason"] = reason
+                    GetResponse(responseURL, responseBody)
+
+        except:
+                #This except block is triggered only for wrong base_url or wrong credentials.
+                responseStatus = 'FAILED'
+                reason = 'Please check if the base_url or the credentials set in Secrets Manager are wrong.'
+                if responseStatus == 'FAILED':
+                    responseBody.update({"Status":responseStatus})
+                    if "Reason" in str(responseBody):
+                        responseBody.update({"Reason":reason})
+                    else:
+                        responseBody["Reason"] = reason
+                    GetResponse(responseURL, responseBody)
     
     #If the action of CloudFormation is Update stack, CloudFormation will receive a success response
     if event['RequestType'] == "Update":
@@ -168,7 +181,7 @@ def CheckStatus (url):
     response = response.json()
     count = 0
 
-    while "processing-completed" not in str(response) and count < 120:
+    while "processing-completed" not in str(response) or count < 120:
         time.sleep(1)
         count += 1
         response = requests.get(url, headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
