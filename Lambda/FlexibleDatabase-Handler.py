@@ -376,12 +376,12 @@ def PostDatabase (event, subscription_id):
     print ("This is the response after POST call: " + str(response_json))
 
     time.sleep(5)
-    response = requests.get(response['links'][0]['href'], headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
-    response = response.json()
+    response = requests.get(response_json['links'][0]['href'], headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
+    response_json = response.json()
     print ("This is the response 5 seconds after POST call: " + str(response))
 
-    return response
-    Logs(response)
+    return response_json
+    Logs(response_json)
 
 #Returns the status of the Database: active/pending/deleting
 def GetDatabaseStatus (subscription_id, database_id):
