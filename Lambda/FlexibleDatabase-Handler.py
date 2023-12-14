@@ -76,21 +76,15 @@ def lambda_handler (event, context):
     if "storagePath" in event['ResourceProperties']:
         remoteBackup["storagePath"] = event['ResourceProperties']["storagePath"]
         
-    alertsList = []
-    alertsDict = {}
-    if "alertName" in event['ResourceProperties']:
-        alertsDict["name"] = event['ResourceProperties']["alertName"]
-    if "alertValue" in event['ResourceProperties']:
-        alertsDict["value"] = event['ResourceProperties']["alertValue"]
-    alertsList.append(alertsDict)
+    if "alerts" in event['ResourceProperties']:
+        alertsList = []
+        alerts = event['ResourceProperties']["alerts"].split(",")
+        alertsList = [{'name': alert.split(':')[0], 'value': int(alert.split(':')[1])} for alert in alerts]
     
-    modulesList = []
-    modulesDict = {}
     if "moduleName" in event['ResourceProperties']:
-        modulesDict["name"] = event['ResourceProperties']["moduleName"]
-    if "parameters" in event['ResourceProperties']: 
-        modulesDict["parameters"] = event['ResourceProperties']["parameters"]
-    modulesList.append(modulesDict)
+        modulesList = []
+        modules = event['ResourceProperties']["moduleName"].split(",")
+        modulesList = [{'name': module} for module in modules]
     
     callEvent = {}
     if "dryRun" in event['ResourceProperties']:
@@ -135,8 +129,10 @@ def lambda_handler (event, context):
         callEvent["saslUsername"] = event['ResourceProperties']["saslUsername"]
     if "saslPassword" in event['ResourceProperties']:
         callEvent["saslPassword"] = event['ResourceProperties']["saslPassword"]
-    if "alertName" in event['ResourceProperties']:
+    if "alerts" in event['ResourceProperties']:
         callEvent["alerts"] = alertsList
+    if "parameters" in event['ResourceProperties']: 
+        callEvent["parameters"] = event['ResourceProperties']["parameters"]
     if "moduleName" in event['ResourceProperties']:
         callEvent["modules"] = modulesList
         

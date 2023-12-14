@@ -186,16 +186,13 @@ Parameters:
       Type: String
       Description: "[Optional]. Memcached (SASL) Password to access the database. If omitted, a random 32 character long alphanumeric password will be automatically generated. Can only be set if Database Protocol is MEMCACHED"
     #alerts
-    alertName:
+    alerts:
       Type: String
-      Description: "[Required to enable alerts]. Alert name. Name list: [ dataset-size, datasets-size, throughput-higher-than, throughput-lower-than, latency, syncsource-error, syncsource-lag, connections-limit ]"
-    alertValue:
-      Type: String
-      Description: "[Required to enable alerts]. Alert value. Example: 80"
+      Description: "[Required to enable alerts]. Assign an integer value for the desired alert as in example. Alert name list: [ dataset-size, datasets-size, throughput-higher-than, throughput-lower-than, latency, syncsource-error, syncsource-lag, connections-limit ]. Example:  dataset-size: 44, datasets-size: 20, throughput-higher-than: 100."
     #modules
     moduleName:
       Type: String
-      Description: "[Required only to enable modules]. Redis module Id"
+      Description: "[Required only to enable modules]. Redis module Id. Example: RedisBloom, RedisJSON"
     parameters:
       Type: String
       Description: "[Optional]. Redis database module parameters (name and value), as relevant to the specific module (see modules parameters specification). Example: OrderedMap {}"
@@ -253,8 +250,7 @@ Metadata:
        Label: 
          default: "alerts"
        Parameters:
-         - alertName
-         - alertValue
+         - alerts
       - 
        Label: 
          default: "modules"
@@ -294,8 +290,7 @@ Conditions:
   passwordCondition:                            !Not [!Equals [!Ref password, ""]]
   saslUsernameCondition:                        !Not [!Equals [!Ref saslUsername, ""]]
   saslPasswordCondition:                        !Not [!Equals [!Ref saslPassword, ""]]
-  alertNameCondition:                           !Not [!Equals [!Ref alertName, ""]]
-  alertValueCondition:                          !Not [!Equals [!Ref alertValue, ""]]
+  alertsCondition:                              !Not [!Equals [!Ref alerts, ""]]
   moduleNameCondition:                          !Not [!Equals [!Ref moduleName, ""]]
   parametersCondition:                          !Not [!Equals [!Ref parameters, ""]]
   regexRulesCondition:                          !Not [!Equals [!Ref regexRules, ""]]
@@ -626,8 +621,7 @@ Resources:
       password:                            !If [passwordCondition, !Ref password, !Ref "AWS::NoValue"]
       saslUsername:                        !If [saslUsernameCondition, !Ref saslUsername, !Ref "AWS::NoValue"]
       saslPassword:                        !If [saslPasswordCondition, !Ref saslPassword, !Ref "AWS::NoValue"]
-      alertName:                           !If [alertNameCondition, !Ref alertName, !Ref "AWS::NoValue"]
-      alertValue:                          !If [alertValueCondition, !Ref alertValue, !Ref "AWS::NoValue"]
+      alerts:                              !If [alertsCondition, !Ref alerts, !Ref "AWS::NoValue"]
       moduleName:                          !If [moduleNameCondition, !Ref moduleName, !Ref "AWS::NoValue"]
       parameters:                          !If [parametersCondition, !Ref parameters, !Ref "AWS::NoValue"]
       regexRules:                          !If [regexRulesCondition, !Ref regexRules, !Ref "AWS::NoValue"]
