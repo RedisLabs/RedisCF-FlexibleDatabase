@@ -82,7 +82,7 @@ Parameters:
       Description: "[Optional]. Database protocol: either 'redis' or 'memcached'. Default: 'redis'"
       Default: redis
     port:
-      Type: Number
+      Type: String
       Description: "[Optional]. TCP port on which the database is available (10000-19999). Generated automatically if omitted. Example: 10000"
     memoryLimitInGb:
       Type: Number
