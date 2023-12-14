@@ -188,7 +188,7 @@ Parameters:
     #alerts
     alerts:
       Type: String
-      Description: "[Required to enable alerts]. Assign an integer value for the desired alert as in example. Alert name list: [ dataset-size, datasets-size, throughput-higher-than, throughput-lower-than, latency, syncsource-error, syncsource-lag, connections-limit ]. Example:  dataset-size: 44, datasets-size: 20, throughput-higher-than: 100."
+      Description: "[Required to enable alerts]. Assign an integer value for the desired alert as in example. Alert name list: [ dataset-size, datasets-size, throughput-higher-than, throughput-lower-than, latency, syncsource-error, syncsource-lag, connections-limit ]. Example:  dataset-size: 42, datasets-size: 43, throughput-higher-than: 44."
     #modules
     moduleName:
       Type: String

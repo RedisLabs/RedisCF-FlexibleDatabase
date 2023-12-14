@@ -78,11 +78,13 @@ def lambda_handler (event, context):
         
     if "alerts" in event['ResourceProperties']:
         alertsList = []
+        event['ResourceProperties']["alerts"] = event['ResourceProperties']["alerts"].replace(" ", "")
         alerts = event['ResourceProperties']["alerts"].split(",")
         alertsList = [{'name': alert.split(':')[0], 'value': int(alert.split(':')[1])} for alert in alerts]
     
     if "moduleName" in event['ResourceProperties']:
         modulesList = []
+        event['ResourceProperties']["moduleName"] = event['ResourceProperties']["moduleName"].replace(" ", "")
         modules = event['ResourceProperties']["moduleName"].split(",")
         modulesList = [{'name': module} for module in modules]
     
