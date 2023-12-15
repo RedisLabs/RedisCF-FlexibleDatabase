@@ -1,9 +1,26 @@
 version: 0.2
 
-
 env:
   variables:
     VERSION_NUMBER: "v1.0.0" # Default value
+    #Add more bucket names as needed. Waiting approval for buckets for Tel Aviv and Hong Kong
+    BUCKET_LIST: >
+     redis-cf-ap-northeast-1,
+     redis-cf-ap-northeast-2,
+     redis-cf-ap-south-1,
+     redis-cf-ap-southeast-1,
+     redis-cf-ap-southeast-2,
+     redis-cf-ca-central-1,
+     redis-cf-eu-central-1,
+     redis-cf-eu-north-1,
+     redis-cf-eu-west-1,
+     redis-cf-eu-west-2,
+     redis-cf-eu-west-3,
+     redis-cf-sa-east-1,
+     redis-cf-us-east-1,
+     redis-cf-us-east-2,
+     redis-cf-us-west-1,
+     redis-cf-us-west-2
 
 phases:
   pre_build:
@@ -23,15 +40,16 @@ phases:
         export VERSION_NUMBER=$version_number
 
       # Upload CF template to S3
-      - aws s3 cp CloudFormation/FlexibleDatabaseCFTemplate.yml s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-      - aws s3 cp CloudFormation/FlexibleDatabaseCFTemplate.yml s3://redis-cicd/Flexible-Database/latest/
-
-      - aws s3 cp CloudFormation/FlexibleDatabaseBackupCFTemplate.yml s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-      - aws s3 cp CloudFormation/FlexibleDatabaseBackupCFTemplate.yml s3://redis-cicd/Flexible-Database/latest/
-
-      - aws s3 cp CloudFormation/FlexibleDatabaseImportCFTemplate.yml s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-      - aws s3 cp CloudFormation/FlexibleDatabaseImportCFTemplate.yml s3://redis-cicd/Flexible-Database/latest/
-
+      - |
+        for BUCKET in $(echo $BUCKET_LIST | tr "," "\n"); do
+          echo "Uploading CF template to bucket: $BUCKET"
+          aws s3 cp CloudFormation/FlexibleDatabaseCFTemplate.yml s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp CloudFormation/FlexibleDatabaseCFTemplate.yml s3://$BUCKET/Flexible-Database/latest/
+          aws s3 cp CloudFormation/FlexibleDatabaseBackupCFTemplate.yml s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp CloudFormation/FlexibleDatabaseBackupCFTemplate.yml s3://$BUCKET/Flexible-Database/latest/
+          aws s3 cp CloudFormation/FlexibleDatabaseImportCFTemplate.yml s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp CloudFormation/FlexibleDatabaseImportCFTemplate.yml s3://$BUCKET/Flexible-Database/latest/
+        done
       # Create a zip archive for lambda and upload archives to S3
       - zip -j FlexibleDatabase-Handler.zip Lambda/FlexibleDatabase-Handler.py
       - zip -j FlexibleDatabaseBackup-Handler.zip Lambda/FlexibleDatabaseBackup-Handler.py
@@ -45,35 +63,41 @@ phases:
       - zip -j FlexibleDatabaseBackup-CFResponse.zip Lambda/FlexibleDatabaseBackup-CFResponse.py
       - zip -j FlexibleDatabaseImport-CFResponse.zip Lambda/FlexibleDatabaseImport-CFResponse.py
 
-      - aws s3 cp FlexibleDatabase-Handler.zip s3://redis-cicd/Flexible-Database/latest/
-      - aws s3 cp FlexibleDatabase-CheckState.zip s3://redis-cicd/Flexible-Database/latest/
-      - aws s3 cp FlexibleDatabase-CFResponse.zip s3://redis-cicd/Flexible-Database/latest/
-
-      - aws s3 cp FlexibleDatabase-Handler.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-      - aws s3 cp FlexibleDatabase-CheckState.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-      - aws s3 cp FlexibleDatabase-CFResponse.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-
-      - aws s3 cp FlexibleDatabaseBackup-Handler.zip s3://redis-cicd/Flexible-Database/latest/
-      - aws s3 cp FlexibleDatabaseBackup-CheckState.zip s3://redis-cicd/Flexible-Database/latest/
-      - aws s3 cp FlexibleDatabaseBackup-CFResponse.zip s3://redis-cicd/Flexible-Database/latest/
-
-      - aws s3 cp FlexibleDatabaseBackup-Handler.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-      - aws s3 cp FlexibleDatabaseBackup-CheckState.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-      - aws s3 cp FlexibleDatabaseBackup-CFResponse.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-
-      - aws s3 cp FlexibleDatabaseImport-Handler.zip s3://redis-cicd/Flexible-Database/latest/
-      - aws s3 cp FlexibleDatabaseImport-CheckState.zip s3://redis-cicd/Flexible-Database/latest/
-      - aws s3 cp FlexibleDatabaseImport-CFResponse.zip s3://redis-cicd/Flexible-Database/latest/
-
-      - aws s3 cp FlexibleDatabaseImport-Handler.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-      - aws s3 cp FlexibleDatabaseImport-CheckState.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-      - aws s3 cp FlexibleDatabaseImport-CFResponse.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-
+      - |
+        for BUCKET in $(echo $BUCKET_LIST | tr "," "\n"); do
+          echo "Uploading lambda zip to bucket: $BUCKET"
+          aws s3 cp FlexibleDatabase-Handler.zip s3://$BUCKET/Flexible-Database/latest/
+          aws s3 cp FlexibleDatabase-CheckState.zip s3://$BUCKET/Flexible-Database/latest/
+          aws s3 cp FlexibleDatabase-CFResponse.zip s3://$BUCKET/Flexible-Database/latest/
+          aws s3 cp FlexibleDatabase-Handler.zip s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp FlexibleDatabase-CheckState.zip s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp FlexibleDatabase-CFResponse.zip s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp FlexibleDatabaseBackup-Handler.zip s3://$BUCKET/Flexible-Database/latest/
+          aws s3 cp FlexibleDatabaseBackup-CheckState.zip s3://$BUCKET/Flexible-Database/latest/
+          aws s3 cp FlexibleDatabaseBackup-CFResponse.zip s3://$BUCKET/Flexible-Database/latest/
+          aws s3 cp FlexibleDatabaseBackup-Handler.zip s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp FlexibleDatabaseBackup-CheckState.zip s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp FlexibleDatabaseBackup-CFResponse.zip s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp FlexibleDatabaseImport-Handler.zip s3://$BUCKET/Flexible-Database/latest/
+          aws s3 cp FlexibleDatabaseImport-CheckState.zip s3://$BUCKET/Flexible-Database/latest/
+          aws s3 cp FlexibleDatabaseImport-CFResponse.zip s3://$BUCKET/Flexible-Database/latest/
+          aws s3 cp FlexibleDatabaseImport-Handler.zip s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp FlexibleDatabaseImport-CheckState.zip s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp FlexibleDatabaseImport-CFResponse.zip s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+        done
       # Create a zip archive for layers and upload archives to S3
       - cd Layers/requests_layer && zip -r requests_layer.zip python
-      - aws s3 cp requests_layer.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-      - aws s3 cp requests_layer.zip s3://redis-cicd/Flexible-Database/latest/
+      - |
+        for BUCKET in $(echo $BUCKET_LIST | tr "," "\n"); do
+          echo "Uploading requests_layer to bucket: $BUCKET"
+          aws s3 cp requests_layer.zip s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp requests_layer.zip s3://$BUCKET/Flexible-Database/latest/
+        done
       - cd ../secrets_layer && zip -r secrets_layer.zip python
-      - aws s3 cp secrets_layer.zip s3://redis-cicd/Flexible-Database/$VERSION_NUMBER/
-      - aws s3 cp secrets_layer.zip s3://redis-cicd/Flexible-Database/latest/
+      - |
+        for BUCKET in $(echo $BUCKET_LIST | tr "," "\n"); do
+          echo "Uploading secrets_layer to bucket: $BUCKET"
+          aws s3 cp secrets_layer.zip s3://$BUCKET/Flexible-Database/$VERSION_NUMBER/
+          aws s3 cp secrets_layer.zip s3://$BUCKET/Flexible-Database/latest/
+        done
       
